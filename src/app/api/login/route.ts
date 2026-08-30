@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   }
 
   const adminPassword = process.env.ADMIN_PASSWORD;
-  const expectedToken = getExpectedToken();
+  const expectedToken = await getExpectedToken();
   if (!adminPassword || !expectedToken) {
     return NextResponse.json({ error: 'Server misconfiguration.' }, { status: 500 });
   }

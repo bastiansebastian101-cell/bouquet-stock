@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE_NAME, isValidSession } from '@/lib/auth';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const session = request.cookies.get(COOKIE_NAME)?.value;
-  if (isValidSession(session)) return NextResponse.next();
+  if (await isValidSession(session)) return NextResponse.next();
 
   // Clone nextUrl (not a plain `new URL()`) so the redirect stays basePath-aware
   // — this app is proxied under navazano.cz/stock via next.config.mjs's basePath.
