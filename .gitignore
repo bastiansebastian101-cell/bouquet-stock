@@ -26,7 +26,16 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
+
+# local sqlite db (dev only — production uses Postgres)
+/prisma/dev.db
+/prisma/dev.db-journal
+
+# user-uploaded photos in local dev (production uses Vercel Blob)
+/public/flower-images/*
+!/public/flower-images/.gitkeep
 
 # vercel
 .vercel

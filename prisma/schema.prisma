@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Flower {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  priceCzk      Int      // haléře, e.g. 1500 = 15 Kč per stem
+  stockQuantity Int      @default(0) // stems currently in stock
+  color         String?  // optional, e.g. "red", "white" — for the visual card
+  imageUrl      String?  // e.g. "/flower-images/abc123.jpg"
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  bouquetFlowers BouquetFlower[]
+  wasteEntries   WasteEntry[]
+}
+
+model Bouquet {
+  id           String   @id @default(cuid())
+  name         String
+  wrapCostCzk  Int      @default(0) // haléře
+  costCzk      Int      @default(0) // snapshot: flowerTotal+wrap at save time, so later price edits don't rewrite history
+  soldChannel  String?  // "website" | "bolt" | "wolt" | "foodora" — null if just saved as a recipe, not recorded as sold
+  salePriceCzk Int?     // snapshot of the sale price used, if recorded
+  profitCzk    Int?     // snapshot of the computed profit, if recorded
+  createdAt    DateTime @default(now())
+
+  flowers BouquetFlower[]
+}
+
+model WasteEntry {
+  id        String   @id @default(cuid())
+  flowerId  String
+  flower    Flower   @relation(fields: [flowerId], references: [id])
+  quantity  Int
+  costCzk   Int      // snapshot: quantity * flower.priceCzk at time of waste
+  createdAt DateTime @default(now())
+}
+
+model BouquetFlower {
+  id        String  @id @default(cuid())
+  bouquetId String
+  bouquet   Bouquet @relation(fields: [bouquetId], references: [id], onDelete: Cascade)
+  flowerId  String
+  flower    Flower  @relation(fields: [flowerId], references: [id])
+  quantity  Int
+}
+
+model ChannelSetting {
+  id                String  @id @default(cuid())
+  name              String  @unique // "bolt" | "wolt" | "foodora" | "website"
+  commissionPercent Int     // 0-100
+  enabled           Boolean @default(true)
+  vatEnabled        Boolean @default(true) // whether the 21% DPH deduction applies to this channel
+}

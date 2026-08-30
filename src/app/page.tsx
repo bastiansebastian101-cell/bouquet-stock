@@ -1,101 +1,124 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+interface Stats {
+  totalInventoryCzk: number;
+  totalStockQuantity: number;
+  totalLossCzk: number;
+  totalProfitCzk: number;
+}
+
+const PERIODS: { value: string; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: 'year', label: 'This Year' },
+  { value: 'all', label: 'From Start' },
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [period, setPeriod] = useState('today');
+  const [stats, setStats] = useState<Stats | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    fetch(`/api/stats?period=${period}`)
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch(() => setStats(null));
+  }, [period]);
+
+  return (
+    <div className="min-h-screen bg-emerald-50/40 px-4 py-10">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-2">💐</div>
+          <h1 className="text-2xl font-semibold text-emerald-900">Bouquet Cost Calculator</h1>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Period selector + stats */}
+        <div className="flex justify-center gap-2 mb-4 flex-wrap">
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setPeriod(p.value)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
+                period === p.value
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+          <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+            <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">
+              Current Inventory Value
+            </p>
+            <p className="text-xl font-semibold text-emerald-900">
+              {stats ? (stats.totalInventoryCzk / 100).toFixed(2) : '—'} Kč
+            </p>
+            <p className="text-[10px] text-emerald-700/40 mt-1">right now, not period-based</p>
+          </div>
+          <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+            <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">
+              Available Flower Stems
+            </p>
+            <p className="text-xl font-semibold text-emerald-900">
+              {stats ? stats.totalStockQuantity : '—'}
+            </p>
+            <p className="text-[10px] text-emerald-700/40 mt-1">right now, not period-based</p>
+          </div>
+          <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+            <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">Loss from Waste</p>
+            <p className="text-xl font-semibold text-red-600">
+              {stats ? (stats.totalLossCzk / 100).toFixed(2) : '—'} Kč
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+            <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">Total Profit</p>
+            <p
+              className={`text-xl font-semibold ${
+                stats && stats.totalProfitCzk < 0 ? 'text-red-600' : 'text-emerald-900'
+              }`}
+            >
+              {stats ? (stats.totalProfitCzk / 100).toFixed(2) : '—'} Kč
+            </p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link
+            href="/builder"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-4 rounded-xl transition-colors text-center"
+          >
+            🧺 Make Bouquet
+          </Link>
+          <Link
+            href="/price-book"
+            className="border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-100 font-medium py-4 rounded-xl transition-colors text-center"
+          >
+            🌷 Add Flower
+          </Link>
+          <Link
+            href="/waste"
+            className="border-2 border-red-400 text-red-600 hover:bg-red-50 font-medium py-4 rounded-xl transition-colors text-center"
+          >
+            🗑 Add Waste Flower Count
+          </Link>
+          <Link
+            href="/history"
+            className="border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-100 font-medium py-4 rounded-xl transition-colors text-center"
+          >
+            📖 View Old Bouquets
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
