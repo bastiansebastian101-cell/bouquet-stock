@@ -57,6 +57,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       salePriceCzk: body.salePriceCzk,
       adSpendCzk,
       profitCzk,
+      soldAt: new Date(),
     },
   });
 

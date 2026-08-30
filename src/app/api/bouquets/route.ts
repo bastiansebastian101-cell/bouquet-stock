@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
           salePriceCzk,
           adSpendCzk: soldChannel ? adSpendCzk : null,
           profitCzk,
+          soldAt: soldChannel ? new Date() : null,
           flowers: { create: flowers.map((f) => ({ flowerId: f.flowerId, quantity: f.quantity })) },
         },
         include: { flowers: { include: { flower: true } } },

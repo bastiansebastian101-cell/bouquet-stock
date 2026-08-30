@@ -31,6 +31,7 @@ model Bouquet {
   salePriceCzk Int?     // snapshot of the sale price used, if recorded
   adSpendCzk   Int?     // snapshot of ad spend to get this order, if recorded — already subtracted into profitCzk below
   profitCzk    Int?     // snapshot of the computed profit (after commission, DPH, bouquet cost, and ad spend), if recorded
+  soldAt       DateTime? // when the sale was recorded — may be well after createdAt (e.g. via /sales), so revenue/profit stats filter on this, not createdAt
   createdAt    DateTime @default(now())
 
   flowers BouquetFlower[]

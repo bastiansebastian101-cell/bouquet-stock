@@ -37,12 +37,14 @@ export async function GET(request: NextRequest) {
     _sum: { costCzk: true },
   });
 
-  const profitAgg = await prisma.bouquet.aggregate({
+  // Filtered by soldAt (when the sale was recorded), not createdAt (when the
+  // bouquet recipe was made) — a bouquet built days ago but sold today via
+  // /sales should count as today's revenue/profit, not the build day's.
+  const salesAgg = await prisma.bouquet.aggregate({
     where: {
-      profitCzk: { not: null },
-      ...(periodStart ? { createdAt: { gte: periodStart } } : {}),
+      soldAt: periodStart ? { gte: periodStart } : { not: null },
     },
-    _sum: { profitCzk: true },
+    _sum: { profitCzk: true, salePriceCzk: true },
   });
 
   return NextResponse.json({
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
     totalInventoryCzk,
     totalStockQuantity,
     totalLossCzk: wasteAgg._sum.costCzk ?? 0,
-    totalProfitCzk: profitAgg._sum.profitCzk ?? 0,
+    totalRevenueCzk: salesAgg._sum.salePriceCzk ?? 0,
+    totalProfitCzk: salesAgg._sum.profitCzk ?? 0,
   });
 }
