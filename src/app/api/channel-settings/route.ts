@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+// Always read live from the DB — this has no dynamic function/param usage,
+// so without this Next.js can statically cache the response, which would
+// make PATCH updates (toggle/commission changes) look like they don't work.
+export const dynamic = 'force-dynamic';
+
 const DEFAULTS: { name: string; commissionPercent: number; enabled: boolean }[] = [
   { name: 'website', commissionPercent: 0, enabled: true },
   { name: 'bolt', commissionPercent: 30, enabled: true },

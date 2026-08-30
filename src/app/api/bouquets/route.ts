@@ -6,6 +6,10 @@ interface IncomingFlower {
   quantity: number;
 }
 
+// See channel-settings/route.ts — no dynamic function/param usage in GET
+// means Next.js could otherwise statically cache it and serve stale history.
+export const dynamic = 'force-dynamic';
+
 const KNOWN_CHANNELS = ['website', 'bolt', 'wolt', 'foodora'];
 
 function parseFlowers(body: { flowers?: unknown }): IncomingFlower[] | null {

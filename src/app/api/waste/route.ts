@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
+// See channel-settings/route.ts — no dynamic function/param usage here means
+// Next.js could otherwise statically cache this and serve stale waste data.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const entries = await prisma.wasteEntry.findMany({
     orderBy: { createdAt: 'desc' },

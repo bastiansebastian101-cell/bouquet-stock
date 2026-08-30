@@ -127,6 +127,9 @@ export default function BuilderPage() {
   const [channels, setChannels] = useState<ChannelSetting[]>([]);
   const [salePrices, setSalePrices] = useState<Record<string, string>>({});
   const [showSettings, setShowSettings] = useState(false);
+  const [commissionDrafts, setCommissionDrafts] = useState<Record<string, string>>({});
+  const [savingChannel, setSavingChannel] = useState<string | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [soldChannelChoice, setSoldChannelChoice] = useState('');
   const basketRef = useRef<HTMLDivElement>(null);
   const flyIdRef = useRef(0);
@@ -151,13 +154,42 @@ export default function BuilderPage() {
   const updateChannel = async (
     name: string,
     patch: { commissionPercent?: number; enabled?: boolean; vatEnabled?: boolean }
-  ) => {
-    await apiFetch(`/api/channel-settings/${name}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    });
-    loadChannels();
+  ): Promise<boolean> => {
+    setSettingsError(null);
+    try {
+      const res = await apiFetch(`/api/channel-settings/${name}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        setSettingsError('Could not save that change — try again.');
+        return false;
+      }
+      await loadChannels();
+      return true;
+    } catch {
+      setSettingsError('Could not save that change — check your connection and try again.');
+      return false;
+    }
+  };
+
+  const saveCommission = async (name: string, draftValue: string) => {
+    const value = parseInt(draftValue, 10);
+    if (!Number.isInteger(value) || value < 0 || value > 100) {
+      setSettingsError('Commission must be a whole number between 0 and 100.');
+      return;
+    }
+    setSavingChannel(name);
+    const ok = await updateChannel(name, { commissionPercent: value });
+    setSavingChannel(null);
+    if (ok) {
+      setCommissionDrafts((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
   const remainingStock = (flower: Flower) => flower.stockQuantity - (selected[flower.id] ?? 0);
@@ -455,65 +487,77 @@ export default function BuilderPage() {
           <div className="bg-emerald-50 rounded-xl p-4 mb-5">
             <div className="flex items-center gap-3 text-xs text-emerald-700/60 font-medium mb-2 px-0">
               <span className="w-24">Channel</span>
-              <span className="w-24 text-center">Commission</span>
+              <span className="w-32">Commission</span>
               <span className="w-16 text-center">DPH</span>
               <span className="w-11 text-center">Channel on</span>
             </div>
+            {settingsError && <p className="text-red-600 text-sm mb-2">{settingsError}</p>}
             <div className="space-y-2">
-              {channels.map((channel) => (
-                <div key={channel.id} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-emerald-900 w-24">
-                    {CHANNEL_LABELS[channel.name] ?? channel.name}
-                  </span>
-                  <div className="flex items-center gap-2 w-24">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      disabled={channel.name === 'website'}
-                      defaultValue={channel.commissionPercent}
-                      onBlur={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        if (Number.isInteger(value) && value >= 0 && value <= 100 && value !== channel.commissionPercent) {
-                          updateChannel(channel.name, { commissionPercent: value });
+              {channels.map((channel) => {
+                const draftValue = commissionDrafts[channel.name] ?? String(channel.commissionPercent);
+                const isDirty = draftValue !== String(channel.commissionPercent);
+                const isSaving = savingChannel === channel.name;
+                return (
+                  <div key={channel.id} className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-emerald-900 w-24">
+                      {CHANNEL_LABELS[channel.name] ?? channel.name}
+                    </span>
+                    <div className="flex items-center gap-2 w-32">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        disabled={channel.name === 'website'}
+                        value={channel.name === 'website' ? 0 : draftValue}
+                        onChange={(e) =>
+                          setCommissionDrafts((prev) => ({ ...prev, [channel.name]: e.target.value }))
                         }
-                      }}
-                      className="w-16 border border-emerald-300 rounded px-2 py-1 text-sm text-right disabled:bg-gray-100 disabled:text-gray-400"
-                    />
-                    <span className="text-sm text-emerald-700 w-4">%</span>
-                  </div>
-                  <div className="w-16 flex justify-center">
-                    <button
-                      onClick={() => updateChannel(channel.name, { vatEnabled: !channel.vatEnabled })}
-                      className={`relative w-11 h-6 rounded-full transition-colors ${
-                        channel.vatEnabled ? 'bg-emerald-600' : 'bg-gray-300'
-                      }`}
-                      title={channel.vatEnabled ? 'Turn off DPH' : 'Turn on DPH'}
-                    >
-                      <span
-                        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                          channel.vatEnabled ? 'translate-x-5' : 'translate-x-0.5'
-                        }`}
+                        className="w-16 border border-emerald-300 rounded px-2 py-1 text-sm text-right disabled:bg-gray-100 disabled:text-gray-400"
                       />
-                    </button>
-                  </div>
-                  <div className="w-11 flex justify-center">
-                    <button
-                      onClick={() => updateChannel(channel.name, { enabled: !channel.enabled })}
-                      className={`relative w-11 h-6 rounded-full transition-colors ${
-                        channel.enabled ? 'bg-emerald-600' : 'bg-gray-300'
-                      }`}
-                      title={channel.enabled ? 'Turn off' : 'Turn on'}
-                    >
-                      <span
-                        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                          channel.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      <span className="text-sm text-emerald-700 w-4">%</span>
+                      {channel.name !== 'website' && isDirty && (
+                        <button
+                          onClick={() => saveCommission(channel.name, draftValue)}
+                          disabled={isSaving}
+                          className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium px-2 py-1 rounded"
+                        >
+                          {isSaving ? 'Saving…' : 'Save'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="w-16 flex justify-center">
+                      <button
+                        onClick={() => updateChannel(channel.name, { vatEnabled: !channel.vatEnabled })}
+                        className={`relative w-11 h-6 rounded-full transition-colors ${
+                          channel.vatEnabled ? 'bg-emerald-600' : 'bg-gray-300'
                         }`}
-                      />
-                    </button>
+                        title={channel.vatEnabled ? 'Turn off DPH' : 'Turn on DPH'}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            channel.vatEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <div className="w-11 flex justify-center">
+                      <button
+                        onClick={() => updateChannel(channel.name, { enabled: !channel.enabled })}
+                        className={`relative w-11 h-6 rounded-full transition-colors ${
+                          channel.enabled ? 'bg-emerald-600' : 'bg-gray-300'
+                        }`}
+                        title={channel.enabled ? 'Turn off' : 'Turn on'}
+                      >
+                        <span
+                          className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                            channel.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
