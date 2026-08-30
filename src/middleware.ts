@@ -5,7 +5,10 @@ export function middleware(request: NextRequest) {
   const session = request.cookies.get(COOKIE_NAME)?.value;
   if (isValidSession(session)) return NextResponse.next();
 
-  const loginUrl = new URL('/login', request.url);
+  // Clone nextUrl (not a plain `new URL()`) so the redirect stays basePath-aware
+  // — this app is proxied under navazano.cz/stock via next.config.mjs's basePath.
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = '/login';
   return NextResponse.redirect(loginUrl);
 }
 

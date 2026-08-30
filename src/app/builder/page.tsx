@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Flower {
   id: string;
@@ -131,13 +132,13 @@ export default function BuilderPage() {
   const flyIdRef = useRef(0);
 
   const load = async () => {
-    const res = await fetch('/api/flowers');
+    const res = await apiFetch('/api/flowers');
     const data = await res.json();
     setFlowers(data.flowers ?? []);
   };
 
   const loadChannels = async () => {
-    const res = await fetch('/api/channel-settings');
+    const res = await apiFetch('/api/channel-settings');
     const data = await res.json();
     setChannels(data.channels ?? []);
   };
@@ -151,7 +152,7 @@ export default function BuilderPage() {
     name: string,
     patch: { commissionPercent?: number; enabled?: boolean; vatEnabled?: boolean }
   ) => {
-    await fetch(`/api/channel-settings/${name}`, {
+    await apiFetch(`/api/channel-settings/${name}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -230,7 +231,7 @@ export default function BuilderPage() {
     }
 
     setSaving(true);
-    const res = await fetch('/api/bouquets', {
+    const res = await apiFetch('/api/bouquets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

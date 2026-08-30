@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/apiFetch';
 
 export default function LoginPage() {
   const [password, setPassword] = useState('');
@@ -14,7 +15,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
-    const res = await fetch('/api/login', {
+    const res = await apiFetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),

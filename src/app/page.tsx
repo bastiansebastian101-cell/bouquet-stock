@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Stats {
   totalInventoryCzk: number;
@@ -23,7 +24,7 @@ export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetch(`/api/stats?period=${period}`)
+    apiFetch(`/api/stats?period=${period}`)
       .then((res) => res.json())
       .then((data) => setStats(data))
       .catch(() => setStats(null));

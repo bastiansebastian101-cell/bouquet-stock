@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface BouquetFlower {
   id: string;
@@ -33,7 +34,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/bouquets')
+    apiFetch('/api/bouquets')
       .then((res) => res.json())
       .then((data) => setBouquets(data.bouquets ?? []))
       .finally(() => setLoading(false));

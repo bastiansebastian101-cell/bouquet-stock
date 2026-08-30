@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Flower {
   id: string;
@@ -15,7 +16,7 @@ interface Flower {
 async function uploadImage(file: File): Promise<string | null> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch('/api/upload', { method: 'POST', body: formData });
+  const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
   if (!res.ok) return null;
   const data = await res.json();
   return data.url ?? null;
@@ -128,7 +129,7 @@ export default function PriceBookPage() {
 
   const load = async () => {
     setLoading(true);
-    const res = await fetch('/api/flowers');
+    const res = await apiFetch('/api/flowers');
     const data = await res.json();
     setFlowers(data.flowers ?? []);
     setLoading(false);
@@ -139,7 +140,7 @@ export default function PriceBookPage() {
   }, []);
 
   const updateFlower = async (id: string, patch: Record<string, unknown>) => {
-    await fetch(`/api/flowers/${id}`, {
+    await apiFetch(`/api/flowers/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
@@ -165,7 +166,7 @@ export default function PriceBookPage() {
       return;
     }
 
-    const res = await fetch('/api/flowers', {
+    const res = await apiFetch('/api/flowers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newName.trim(), priceCzk, stockQuantity, imageUrl: newImageUrl }),
@@ -187,7 +188,7 @@ export default function PriceBookPage() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Remove ${name} from the price book?`)) return;
     setError(null);
-    const res = await fetch(`/api/flowers/${id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/flowers/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       setError(

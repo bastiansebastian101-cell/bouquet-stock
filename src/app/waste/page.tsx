@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/apiFetch';
 
 interface Flower {
   id: string;
@@ -28,7 +29,7 @@ export default function WastePage() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const [flowersRes, wasteRes] = await Promise.all([fetch('/api/flowers'), fetch('/api/waste')]);
+    const [flowersRes, wasteRes] = await Promise.all([apiFetch('/api/flowers'), apiFetch('/api/waste')]);
     const flowersData = await flowersRes.json();
     const wasteData = await wasteRes.json();
     setFlowers(flowersData.flowers ?? []);
@@ -54,7 +55,7 @@ export default function WastePage() {
     }
 
     setSaving(true);
-    const res = await fetch('/api/waste', {
+    const res = await apiFetch('/api/waste', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ flowerId: selectedFlowerId, quantity: qty }),
