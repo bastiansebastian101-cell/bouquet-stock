@@ -81,7 +81,7 @@ export default function WastePage() {
     <div className="max-w-2xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold text-emerald-900">Waste Flowers</h1>
-        <Link href="/" className="text-sm text-emerald-700 hover:text-emerald-900 font-medium">
+        <Link href="/dashboard" className="text-sm text-emerald-700 hover:text-emerald-900 font-medium">
           ← Home
         </Link>
       </div>
