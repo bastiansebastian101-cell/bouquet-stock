@@ -118,6 +118,12 @@ export default function Dashboard() {
           >
             📖 View Old Bouquets
           </Link>
+          <Link
+            href="/sales"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-4 rounded-xl transition-colors text-center sm:col-span-2"
+          >
+            💰 Add Sales Record
+          </Link>
         </div>
       </div>
     </div>

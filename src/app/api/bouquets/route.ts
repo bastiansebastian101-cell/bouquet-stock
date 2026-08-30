@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { computeProfitCzk } from '@/lib/profit';
 
 interface IncomingFlower {
   flowerId: string;
@@ -101,10 +102,7 @@ export async function POST(request: NextRequest) {
       if (soldChannel && salePriceCzk !== null) {
         const channel = await tx.channelSetting.findUnique({ where: { name: soldChannel } });
         if (channel) {
-          const commissionAmount = Math.round((salePriceCzk * channel.commissionPercent) / 100);
-          const payoutCzk = salePriceCzk - commissionAmount;
-          const vatCzk = channel.vatEnabled ? Math.round((salePriceCzk * 21) / 121) : 0;
-          profitCzk = payoutCzk - vatCzk - costCzk - adSpendCzk;
+          profitCzk = computeProfitCzk(salePriceCzk, channel.commissionPercent, channel.vatEnabled, costCzk, adSpendCzk);
         }
       }
 
