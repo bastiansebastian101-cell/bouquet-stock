@@ -20,6 +20,8 @@ interface ChannelSetting {
   vatEnabled: boolean;
 }
 
+type Mode = 'existing' | 'new';
+
 const CHANNEL_LABELS: Record<string, string> = {
   website: 'Website',
   bolt: 'Bolt',
@@ -32,22 +34,25 @@ const CHANNEL_LABELS: Record<string, string> = {
 function computeResult(
   salePriceCzk: number,
   commissionPercent: number,
-  bouquetCostCzk: number,
+  costCzk: number,
   vatEnabled: boolean,
   adSpendCzk: number
 ) {
   const commissionAmount = Math.round((salePriceCzk * commissionPercent) / 100);
   const payoutCzk = salePriceCzk - commissionAmount;
   const vatCzk = vatEnabled ? Math.round((salePriceCzk * 21) / 121) : 0;
-  const profitCzk = payoutCzk - vatCzk - bouquetCostCzk - adSpendCzk;
+  const profitCzk = payoutCzk - vatCzk - costCzk - adSpendCzk;
   return { payoutCzk, profitCzk, vatCzk, commissionAmount };
 }
 
 export default function SalesPage() {
+  const [mode, setMode] = useState<Mode>('existing');
   const [bouquets, setBouquets] = useState<Bouquet[]>([]);
   const [channels, setChannels] = useState<ChannelSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [bouquetId, setBouquetId] = useState('');
+  const [productName, setProductName] = useState('');
+  const [productCost, setProductCost] = useState('');
   const [channelName, setChannelName] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [adSpend, setAdSpend] = useState('');
@@ -74,24 +79,49 @@ export default function SalesPage() {
   const selectedBouquet = bouquets.find((b) => b.id === bouquetId) ?? null;
   const selectedChannel = channels.find((c) => c.name === channelName) ?? null;
 
+  const productCostCzk = productCost.trim() ? Math.round(parseFloat(productCost.replace(',', '.')) * 100) : NaN;
+  const hasProductCost = mode === 'new' && Number.isFinite(productCostCzk) && productCostCzk >= 0;
+
+  const costCzk = mode === 'existing' ? selectedBouquet?.costCzk ?? null : hasProductCost ? productCostCzk : null;
+  const itemName = mode === 'existing' ? selectedBouquet?.name ?? null : productName.trim() || null;
+
   const salePriceCzk = salePrice.trim() ? Math.round(parseFloat(salePrice.replace(',', '.')) * 100) : NaN;
   const hasSalePrice = Number.isFinite(salePriceCzk) && salePriceCzk > 0;
   const adSpendInputCzk = adSpend.trim() ? Math.round(parseFloat(adSpend.replace(',', '.')) * 100) : 0;
   const adSpendCzk = Number.isFinite(adSpendInputCzk) && adSpendInputCzk > 0 ? adSpendInputCzk : 0;
 
   const result =
-    selectedBouquet && selectedChannel && hasSalePrice
-      ? computeResult(salePriceCzk, selectedChannel.commissionPercent, selectedBouquet.costCzk, selectedChannel.vatEnabled, adSpendCzk)
+    costCzk !== null && selectedChannel && hasSalePrice
+      ? computeResult(salePriceCzk, selectedChannel.commissionPercent, costCzk, selectedChannel.vatEnabled, adSpendCzk)
       : null;
+
+  const resetForm = () => {
+    setBouquetId('');
+    setProductName('');
+    setProductCost('');
+    setChannelName('');
+    setSalePrice('');
+    setAdSpend('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSavedMessage(null);
 
-    if (!selectedBouquet) {
+    if (mode === 'existing' && !selectedBouquet) {
       setError('Pick which bouquet this sale is for.');
       return;
+    }
+    if (mode === 'new') {
+      if (!productName.trim()) {
+        setError('Give the new product a name.');
+        return;
+      }
+      if (!hasProductCost) {
+        setError('Enter what this product cost you to make/buy.');
+        return;
+      }
     }
     if (!selectedChannel) {
       setError('Pick where this sale came from.');
@@ -103,11 +133,24 @@ export default function SalesPage() {
     }
 
     setSaving(true);
-    const res = await apiFetch(`/api/bouquets/${selectedBouquet.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ soldChannel: selectedChannel.name, salePriceCzk, adSpendCzk }),
-    });
+    const res =
+      mode === 'existing'
+        ? await apiFetch(`/api/bouquets/${selectedBouquet!.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ soldChannel: selectedChannel.name, salePriceCzk, adSpendCzk }),
+          })
+        : await apiFetch('/api/bouquets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: productName.trim(),
+              costCzk: productCostCzk,
+              soldChannel: selectedChannel.name,
+              salePriceCzk,
+              adSpendCzk,
+            }),
+          });
     setSaving(false);
 
     if (!res.ok) {
@@ -122,12 +165,9 @@ export default function SalesPage() {
 
     const data = await res.json();
     setSavedMessage(
-      `Saved — sold "${selectedBouquet.name}" via ${CHANNEL_LABELS[selectedChannel.name] ?? selectedChannel.name} — profit ${(data.bouquet.profitCzk / 100).toFixed(2)} Kč`
+      `Saved — sold "${itemName}" via ${CHANNEL_LABELS[selectedChannel.name] ?? selectedChannel.name} — profit ${(data.bouquet.profitCzk / 100).toFixed(2)} Kč`
     );
-    setBouquetId('');
-    setChannelName('');
-    setSalePrice('');
-    setAdSpend('');
+    resetForm();
     load();
   };
 
@@ -140,38 +180,90 @@ export default function SalesPage() {
         </Link>
       </div>
 
-      <p className="text-sm text-emerald-700/70 mb-6">
-        Pick a bouquet you already made, say where it sold, and the payout, DPH, and profit are calculated
-        automatically from that channel&apos;s current settings.
+      <p className="text-sm text-emerald-700/70 mb-4">
+        Record a sale — pick something you already made, or add a new product on the spot — say where it sold,
+        and the payout, DPH, and profit are calculated automatically.
       </p>
+
+      <div className="flex gap-2 mb-5">
+        <button
+          type="button"
+          onClick={() => {
+            setMode('existing');
+            setError(null);
+          }}
+          className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
+            mode === 'existing' ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700 border border-emerald-300'
+          }`}
+        >
+          Existing bouquet
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('new');
+            setError(null);
+          }}
+          className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
+            mode === 'new' ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700 border border-emerald-300'
+          }`}
+        >
+          + New product
+        </button>
+      </div>
 
       {loading ? (
         <p className="text-emerald-700/60 text-sm">Loading…</p>
-      ) : bouquets.length === 0 ? (
-        <p className="text-emerald-700/60 text-sm">
-          No unsold bouquets to record a sale for —{' '}
-          <Link href="/builder" className="underline">
-            make one first
-          </Link>
-          .
-        </p>
       ) : (
         <form onSubmit={handleSubmit} className="bg-emerald-50 rounded-xl p-4 space-y-3">
-          <div>
-            <label className="block text-xs text-emerald-700 mb-1">Bouquet</label>
-            <select
-              value={bouquetId}
-              onChange={(e) => setBouquetId(e.target.value)}
-              className="w-full border border-emerald-300 rounded px-3 py-1.5 text-sm"
-            >
-              <option value="">Select a bouquet…</option>
-              {bouquets.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} — cost {(b.costCzk / 100).toFixed(2)} Kč
-                </option>
-              ))}
-            </select>
-          </div>
+          {mode === 'existing' ? (
+            bouquets.length === 0 ? (
+              <p className="text-sm text-emerald-700/60">
+                No unsold bouquets to record a sale for —{' '}
+                <Link href="/builder" className="underline">
+                  make one
+                </Link>{' '}
+                or use &quot;+ New product&quot; above.
+              </p>
+            ) : (
+              <div>
+                <label className="block text-xs text-emerald-700 mb-1">Bouquet</label>
+                <select
+                  value={bouquetId}
+                  onChange={(e) => setBouquetId(e.target.value)}
+                  className="w-full border border-emerald-300 rounded px-3 py-1.5 text-sm"
+                >
+                  <option value="">Select a bouquet…</option>
+                  {bouquets.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} — cost {(b.costCzk / 100).toFixed(2)} Kč
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-emerald-700 mb-1">Product name</label>
+                <input
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="e.g. Wedding centerpiece"
+                  className="w-full border border-emerald-300 rounded px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-emerald-700 mb-1">What it cost you (Kč)</label>
+                <input
+                  value={productCost}
+                  onChange={(e) => setProductCost(e.target.value)}
+                  placeholder="0"
+                  className="w-full border border-emerald-300 rounded px-3 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs text-emerald-700 mb-1">Source of revenue</label>
@@ -212,7 +304,7 @@ export default function SalesPage() {
             </div>
           </div>
 
-          {result && (
+          {result && costCzk !== null && (
             <div className="bg-white rounded-lg p-3 space-y-0.5 text-sm">
               <div className="flex justify-between text-emerald-700/70">
                 <span>Commission ({selectedChannel!.commissionPercent}%)</span>
@@ -227,8 +319,8 @@ export default function SalesPage() {
                 <span>−{(result.vatCzk / 100).toFixed(2)} Kč</span>
               </div>
               <div className="flex justify-between text-emerald-700/70">
-                <span>Bouquet cost</span>
-                <span>−{(selectedBouquet!.costCzk / 100).toFixed(2)} Kč</span>
+                <span>{mode === 'existing' ? 'Bouquet cost' : 'Product cost'}</span>
+                <span>−{(costCzk / 100).toFixed(2)} Kč</span>
               </div>
               {adSpendCzk > 0 && (
                 <div className="flex justify-between text-emerald-700/70">

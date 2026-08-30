@@ -13,7 +13,11 @@ export const dynamic = 'force-dynamic';
 
 const KNOWN_CHANNELS = ['website', 'bolt', 'wolt', 'foodora'];
 
+// Returns [] (not null) when flowers is omitted entirely — that's the
+// signal for a manually-priced "quick product" that isn't built from stock
+// (see the manualCostCzk handling in POST below). null means malformed input.
 function parseFlowers(body: { flowers?: unknown }): IncomingFlower[] | null {
+  if (body.flowers === undefined || body.flowers === null) return [];
   if (!Array.isArray(body.flowers) || body.flowers.length === 0) return null;
   const parsed: IncomingFlower[] = [];
   for (const f of body.flowers) {
@@ -60,6 +64,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid_flowers' }, { status: 400 });
   }
 
+  // No flowers means this is a manually-priced product (e.g. something sold
+  // that isn't built from the flower price book) — it needs an explicit cost
+  // instead of one computed from stock.
+  let manualCostCzk: number | undefined;
+  if (flowers.length === 0) {
+    if (!Number.isInteger(body.costCzk) || body.costCzk < 0) {
+      return NextResponse.json({ error: 'invalid_cost' }, { status: 400 });
+    }
+    manualCostCzk = body.costCzk;
+  }
+
   // Optional "recorded as sold" info — only trusted as far as the channel
   // name and sale price; commission/VAT/profit are always recomputed
   // server-side from the channel's real current settings, never taken from
@@ -87,16 +102,22 @@ export async function POST(request: NextRequest) {
   try {
     const bouquet = await prisma.$transaction(async (tx) => {
       // Re-check stock server-side (never trust the client's displayed numbers)
-      // and decrement it atomically as part of saving the bouquet.
-      let flowerCostCzk = 0;
-      for (const f of flowers) {
-        const flower = await tx.flower.findUnique({ where: { id: f.flowerId } });
-        if (!flower || flower.stockQuantity < f.quantity) {
-          throw new Error('insufficient_stock');
+      // and decrement it atomically as part of saving the bouquet. Skipped
+      // entirely for a manually-priced product (no flowers involved).
+      let costCzk: number;
+      if (flowers.length > 0) {
+        let flowerCostCzk = 0;
+        for (const f of flowers) {
+          const flower = await tx.flower.findUnique({ where: { id: f.flowerId } });
+          if (!flower || flower.stockQuantity < f.quantity) {
+            throw new Error('insufficient_stock');
+          }
+          flowerCostCzk += flower.priceCzk * f.quantity;
         }
-        flowerCostCzk += flower.priceCzk * f.quantity;
+        costCzk = flowerCostCzk + wrapCostCzk;
+      } else {
+        costCzk = manualCostCzk! + wrapCostCzk;
       }
-      const costCzk = flowerCostCzk + wrapCostCzk;
 
       let profitCzk: number | null = null;
       if (soldChannel && salePriceCzk !== null) {
