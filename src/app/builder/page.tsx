@@ -45,13 +45,14 @@ function computeChannelResult(
   salePriceCzk: number,
   commissionPercent: number,
   bouquetCostCzk: number,
-  vatEnabled: boolean
+  vatEnabled: boolean,
+  adSpendCzk: number
 ) {
   const commissionAmount = Math.round((salePriceCzk * commissionPercent) / 100);
   const payoutCzk = salePriceCzk - commissionAmount;
   const vatCzk = vatEnabled ? Math.round((salePriceCzk * 21) / 121) : 0;
-  const profitCzk = payoutCzk - vatCzk - bouquetCostCzk;
-  return { payoutCzk, profitCzk, vatCzk, commissionAmount };
+  const profitCzk = payoutCzk - vatCzk - bouquetCostCzk - adSpendCzk;
+  return { payoutCzk, profitCzk, vatCzk, commissionAmount, adSpendCzk };
 }
 
 const COLOR_EMOJI: Record<string, string> = {
@@ -126,6 +127,7 @@ export default function BuilderPage() {
   const [saving, setSaving] = useState(false);
   const [channels, setChannels] = useState<ChannelSetting[]>([]);
   const [salePrices, setSalePrices] = useState<Record<string, string>>({});
+  const [adSpends, setAdSpends] = useState<Record<string, string>>({});
   const [showSettings, setShowSettings] = useState(false);
   const [commissionDrafts, setCommissionDrafts] = useState<Record<string, string>>({});
   const [savingChannel, setSavingChannel] = useState<string | null>(null);
@@ -253,12 +255,16 @@ export default function BuilderPage() {
 
     let soldChannel: string | undefined;
     let recordedSalePriceCzk: number | undefined;
+    let recordedAdSpendCzk: number | undefined;
     if (soldChannelChoice) {
       const input = salePrices[soldChannelChoice] ?? '';
       const parsed = Math.round(parseFloat(input.replace(',', '.')) * 100);
       if (Number.isFinite(parsed) && parsed > 0) {
         soldChannel = soldChannelChoice;
         recordedSalePriceCzk = parsed;
+        const adInput = adSpends[soldChannelChoice] ?? '';
+        const adParsed = adInput.trim() ? Math.round(parseFloat(adInput.replace(',', '.')) * 100) : 0;
+        recordedAdSpendCzk = Number.isFinite(adParsed) && adParsed > 0 ? adParsed : 0;
       }
     }
 
@@ -270,7 +276,7 @@ export default function BuilderPage() {
         name: bouquetName.trim(),
         wrapCostCzk: Number.isFinite(wrapCostCzk) ? wrapCostCzk : 0,
         flowers: selectedEntries.map(([flowerId, quantity]) => ({ flowerId, quantity })),
-        ...(soldChannel && { soldChannel, salePriceCzk: recordedSalePriceCzk }),
+        ...(soldChannel && { soldChannel, salePriceCzk: recordedSalePriceCzk, adSpendCzk: recordedAdSpendCzk }),
       }),
     });
     setSaving(false);
@@ -571,8 +577,13 @@ export default function BuilderPage() {
                 ? Math.round(parseFloat(salePriceInput.replace(',', '.')) * 100)
                 : NaN;
               const hasSalePrice = Number.isFinite(salePriceCzk) && salePriceCzk > 0;
+              const adSpendInput = adSpends[channel.name] ?? '';
+              const adSpendCzkRaw = adSpendInput.trim()
+                ? Math.round(parseFloat(adSpendInput.replace(',', '.')) * 100)
+                : 0;
+              const adSpendCzk = Number.isFinite(adSpendCzkRaw) && adSpendCzkRaw > 0 ? adSpendCzkRaw : 0;
               const result = hasSalePrice
-                ? computeChannelResult(salePriceCzk, channel.commissionPercent, totalCzk, channel.vatEnabled)
+                ? computeChannelResult(salePriceCzk, channel.commissionPercent, totalCzk, channel.vatEnabled, adSpendCzk)
                 : null;
 
               return (
@@ -585,6 +596,15 @@ export default function BuilderPage() {
                     value={salePriceInput}
                     onChange={(e) => setSalePrices((prev) => ({ ...prev, [channel.name]: e.target.value }))}
                     placeholder="Sale price (Kč)"
+                    className="w-full border border-emerald-300 rounded px-2 py-1 text-sm mb-2"
+                  />
+                  <label className="block text-[11px] text-emerald-700/60 mb-1">
+                    Ads spent to get this order (Kč)
+                  </label>
+                  <input
+                    value={adSpendInput}
+                    onChange={(e) => setAdSpends((prev) => ({ ...prev, [channel.name]: e.target.value }))}
+                    placeholder="0"
                     className="w-full border border-emerald-300 rounded px-2 py-1 text-sm mb-2"
                   />
                   {hasSalePrice && result ? (
@@ -605,6 +625,12 @@ export default function BuilderPage() {
                         <span>Bouquet cost</span>
                         <span>−{(totalCzk / 100).toFixed(2)} Kč</span>
                       </div>
+                      {adSpendCzk > 0 && (
+                        <div className="flex justify-between text-emerald-700/70">
+                          <span>Ads spent</span>
+                          <span>−{(adSpendCzk / 100).toFixed(2)} Kč</span>
+                        </div>
+                      )}
                       <div
                         className={`flex justify-between font-semibold pt-0.5 border-t border-emerald-100 ${
                           result.profitCzk >= 0 ? 'text-emerald-900' : 'text-red-600'

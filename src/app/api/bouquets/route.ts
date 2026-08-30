@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
   // the client, same discipline as never trusting a client-submitted price.
   let soldChannel: string | null = null;
   let salePriceCzk: number | null = null;
+  let adSpendCzk = 0;
   if (body.soldChannel !== undefined && body.soldChannel !== null) {
     if (typeof body.soldChannel !== 'string' || !KNOWN_CHANNELS.includes(body.soldChannel)) {
       return NextResponse.json({ error: 'invalid_channel' }, { status: 400 });
@@ -74,6 +75,12 @@ export async function POST(request: NextRequest) {
     }
     soldChannel = body.soldChannel;
     salePriceCzk = body.salePriceCzk;
+    if (body.adSpendCzk !== undefined && body.adSpendCzk !== null) {
+      if (!Number.isInteger(body.adSpendCzk) || body.adSpendCzk < 0) {
+        return NextResponse.json({ error: 'invalid_ad_spend' }, { status: 400 });
+      }
+      adSpendCzk = body.adSpendCzk;
+    }
   }
 
   try {
@@ -97,7 +104,7 @@ export async function POST(request: NextRequest) {
           const commissionAmount = Math.round((salePriceCzk * channel.commissionPercent) / 100);
           const payoutCzk = salePriceCzk - commissionAmount;
           const vatCzk = channel.vatEnabled ? Math.round((salePriceCzk * 21) / 121) : 0;
-          profitCzk = payoutCzk - vatCzk - costCzk;
+          profitCzk = payoutCzk - vatCzk - costCzk - adSpendCzk;
         }
       }
 
@@ -108,6 +115,7 @@ export async function POST(request: NextRequest) {
           costCzk,
           soldChannel,
           salePriceCzk,
+          adSpendCzk: soldChannel ? adSpendCzk : null,
           profitCzk,
           flowers: { create: flowers.map((f) => ({ flowerId: f.flowerId, quantity: f.quantity })) },
         },

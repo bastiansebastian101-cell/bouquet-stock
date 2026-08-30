@@ -17,6 +17,7 @@ interface Bouquet {
   costCzk: number;
   soldChannel: string | null;
   salePriceCzk: number | null;
+  adSpendCzk: number | null;
   profitCzk: number | null;
   createdAt: string;
   flowers: BouquetFlower[];
@@ -98,6 +99,11 @@ export default function HistoryPage() {
                 {b.salePriceCzk !== null && (
                   <span className="text-emerald-700">
                     Sold: <span className="font-medium">{(b.salePriceCzk / 100).toFixed(2)} Kč</span>
+                  </span>
+                )}
+                {b.adSpendCzk !== null && b.adSpendCzk > 0 && (
+                  <span className="text-emerald-700">
+                    Ads: <span className="font-medium">{(b.adSpendCzk / 100).toFixed(2)} Kč</span>
                   </span>
                 )}
                 {b.profitCzk !== null && (

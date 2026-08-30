@@ -29,7 +29,8 @@ model Bouquet {
   costCzk      Int      @default(0) // snapshot: flowerTotal+wrap at save time, so later price edits don't rewrite history
   soldChannel  String?  // "website" | "bolt" | "wolt" | "foodora" — null if just saved as a recipe, not recorded as sold
   salePriceCzk Int?     // snapshot of the sale price used, if recorded
-  profitCzk    Int?     // snapshot of the computed profit, if recorded
+  adSpendCzk   Int?     // snapshot of ad spend to get this order, if recorded — already subtracted into profitCzk below
+  profitCzk    Int?     // snapshot of the computed profit (after commission, DPH, bouquet cost, and ad spend), if recorded
   createdAt    DateTime @default(now())
 
   flowers BouquetFlower[]
