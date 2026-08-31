@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { computeProfitCzk } from '@/lib/profit';
+import { computeSaleResult } from '@/lib/profit';
 
 // See channel-settings/route.ts — kept consistent across every route that
 // reads live, mutable data.
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: 'channel_unavailable' }, { status: 400 });
   }
 
-  const profitCzk = computeProfitCzk(
+  const { payoutCzk, profitCzk } = computeSaleResult(
     body.salePriceCzk,
     channel.commissionPercent,
     channel.vatEnabled,
@@ -56,6 +56,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       soldChannel: body.soldChannel,
       salePriceCzk: body.salePriceCzk,
       adSpendCzk,
+      payoutCzk,
       profitCzk,
       soldAt: new Date(),
     },

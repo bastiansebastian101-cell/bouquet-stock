@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     where: {
       soldAt: periodStart ? { gte: periodStart } : { not: null },
     },
-    _sum: { profitCzk: true, salePriceCzk: true },
+    _sum: { profitCzk: true, salePriceCzk: true, payoutCzk: true },
   });
 
   return NextResponse.json({
@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
     totalStockQuantity,
     totalLossCzk: wasteAgg._sum.costCzk ?? 0,
     totalRevenueCzk: salesAgg._sum.salePriceCzk ?? 0,
+    totalPayoutCzk: salesAgg._sum.payoutCzk ?? 0,
     totalProfitCzk: salesAgg._sum.profitCzk ?? 0,
   });
 }

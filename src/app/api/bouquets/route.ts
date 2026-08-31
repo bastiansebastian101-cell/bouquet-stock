@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { computeProfitCzk } from '@/lib/profit';
+import { computeSaleResult } from '@/lib/profit';
 
 interface IncomingFlower {
   flowerId: string;
@@ -119,11 +119,14 @@ export async function POST(request: NextRequest) {
         costCzk = manualCostCzk! + wrapCostCzk;
       }
 
+      let payoutCzk: number | null = null;
       let profitCzk: number | null = null;
       if (soldChannel && salePriceCzk !== null) {
         const channel = await tx.channelSetting.findUnique({ where: { name: soldChannel } });
         if (channel) {
-          profitCzk = computeProfitCzk(salePriceCzk, channel.commissionPercent, channel.vatEnabled, costCzk, adSpendCzk);
+          const result = computeSaleResult(salePriceCzk, channel.commissionPercent, channel.vatEnabled, costCzk, adSpendCzk);
+          payoutCzk = result.payoutCzk;
+          profitCzk = result.profitCzk;
         }
       }
 
@@ -135,6 +138,7 @@ export async function POST(request: NextRequest) {
           soldChannel,
           salePriceCzk,
           adSpendCzk: soldChannel ? adSpendCzk : null,
+          payoutCzk,
           profitCzk,
           soldAt: soldChannel ? new Date() : null,
           flowers: { create: flowers.map((f) => ({ flowerId: f.flowerId, quantity: f.quantity })) },

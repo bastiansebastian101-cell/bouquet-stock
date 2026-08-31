@@ -9,6 +9,7 @@ interface Stats {
   totalStockQuantity: number;
   totalLossCzk: number;
   totalRevenueCzk: number;
+  totalPayoutCzk: number;
   totalProfitCzk: number;
 }
 
@@ -56,7 +57,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
           <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
             <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">
               Current Inventory Value
@@ -86,6 +87,13 @@ export default function Dashboard() {
             <p className="text-xl font-semibold text-emerald-900">
               {stats ? (stats.totalRevenueCzk / 100).toFixed(2) : '—'} Kč
             </p>
+          </div>
+          <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
+            <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">Net Payout</p>
+            <p className="text-xl font-semibold text-emerald-900">
+              {stats ? (stats.totalPayoutCzk / 100).toFixed(2) : '—'} Kč
+            </p>
+            <p className="text-[10px] text-emerald-700/40 mt-1">after commission, before DPH/cost/ads</p>
           </div>
           <div className="bg-white rounded-xl border border-emerald-200 p-4 text-center">
             <p className="text-xs text-emerald-700/60 uppercase tracking-wide mb-1">Total Profit</p>
