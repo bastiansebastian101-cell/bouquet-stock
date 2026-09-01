@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/apiFetch';
-import { SalesHistoryList, type SoldBouquet } from '@/components/SalesHistoryList';
+import type { SoldBouquet } from '@/components/SalesHistoryList';
 
 interface Stats {
   totalInventoryCzk: number;
@@ -151,12 +151,20 @@ export default function Dashboard() {
         </div>
 
         {/* Sales history */}
-        <div className="mt-10">
-          <h2 className="text-sm font-medium text-emerald-700/70 mb-3 uppercase tracking-wide">
-            Sales History
-          </h2>
-          <SalesHistoryList bouquets={soldBouquets} />
-        </div>
+        <Link
+          href="/sales-history"
+          className="mt-6 flex items-center justify-between bg-white border border-emerald-200 rounded-xl p-4 hover:bg-emerald-50 transition-colors"
+        >
+          <div>
+            <p className="font-semibold text-emerald-900">📊 Sales History</p>
+            <p className="text-xs text-emerald-700/60 mt-0.5">
+              {soldBouquets.length === 0
+                ? 'No sales recorded yet'
+                : `${soldBouquets.length} sale${soldBouquets.length === 1 ? '' : 's'} — sale price, cost, commission, profit`}
+            </p>
+          </div>
+          <span className="text-emerald-600 text-lg">→</span>
+        </Link>
       </div>
     </div>
   );
