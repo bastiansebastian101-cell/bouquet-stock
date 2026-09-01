@@ -38,9 +38,8 @@ const CHANNEL_LABELS: Record<string, string> = {
   foodora: 'Foodora',
 };
 
-// Sale price is treated as already including 21% DPH (Czech VAT), matching
-// how this is normally quoted to customers. Commission is taken on the full
-// sale price, and VAT owed is the 21% portion baked into that same price.
+// Same formula as src/lib/profit.ts (server) — DPH applies only to the
+// commission (the channel's service fee), not the product price.
 function computeChannelResult(
   salePriceCzk: number,
   commissionPercent: number,
@@ -50,7 +49,7 @@ function computeChannelResult(
 ) {
   const commissionAmount = Math.round((salePriceCzk * commissionPercent) / 100);
   const payoutCzk = salePriceCzk - commissionAmount;
-  const vatCzk = vatEnabled ? Math.round((salePriceCzk * 21) / 121) : 0;
+  const vatCzk = vatEnabled ? Math.round((commissionAmount * 21) / 121) : 0;
   const profitCzk = payoutCzk - vatCzk - bouquetCostCzk - adSpendCzk;
   return { payoutCzk, profitCzk, vatCzk, commissionAmount, adSpendCzk };
 }

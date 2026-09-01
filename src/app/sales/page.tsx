@@ -31,6 +31,8 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 // Same formula as src/lib/profit.ts (server) — kept here for a live preview
 // before the record is saved; the server always recomputes it for real.
+// DPH applies only to the commission (the channel's service fee), not the
+// product price.
 function computeResult(
   salePriceCzk: number,
   commissionPercent: number,
@@ -40,7 +42,7 @@ function computeResult(
 ) {
   const commissionAmount = Math.round((salePriceCzk * commissionPercent) / 100);
   const payoutCzk = salePriceCzk - commissionAmount;
-  const vatCzk = vatEnabled ? Math.round((salePriceCzk * 21) / 121) : 0;
+  const vatCzk = vatEnabled ? Math.round((commissionAmount * 21) / 121) : 0;
   const profitCzk = payoutCzk - vatCzk - costCzk - adSpendCzk;
   return { payoutCzk, profitCzk, vatCzk, commissionAmount };
 }
