@@ -9,6 +9,8 @@ interface Bouquet {
   name: string;
   costCzk: number;
   soldChannel: string | null;
+  salePriceCzk: number | null;
+  soldAt: string | null;
   createdAt: string;
 }
 
@@ -50,6 +52,7 @@ function computeResult(
 export default function SalesPage() {
   const [mode, setMode] = useState<Mode>('existing');
   const [bouquets, setBouquets] = useState<Bouquet[]>([]);
+  const [soldBouquets, setSoldBouquets] = useState<Bouquet[]>([]);
   const [channels, setChannels] = useState<ChannelSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [bouquetId, setBouquetId] = useState('');
@@ -69,7 +72,9 @@ export default function SalesPage() {
     ]);
     const bouquetsData = await bouquetsRes.json();
     const channelsData = await channelsRes.json();
-    setBouquets((bouquetsData.bouquets ?? []).filter((b: Bouquet) => !b.soldChannel));
+    const all: Bouquet[] = bouquetsData.bouquets ?? [];
+    setBouquets(all.filter((b) => !b.soldChannel));
+    setSoldBouquets(all.filter((b) => b.soldChannel));
     setChannels(channelsData.channels ?? []);
     setLoading(false);
   };
@@ -352,6 +357,45 @@ export default function SalesPage() {
             {saving ? 'Saving…' : 'Save sales record'}
           </button>
         </form>
+      )}
+
+      <h2 className="text-sm font-medium text-emerald-700/70 mt-8 mb-3 uppercase tracking-wide">
+        Sales history
+      </h2>
+      {loading ? (
+        <p className="text-emerald-700/60 text-sm">Loading…</p>
+      ) : soldBouquets.length === 0 ? (
+        <p className="text-emerald-700/60 text-sm">No sales recorded yet.</p>
+      ) : (
+        <div className="space-y-1">
+          {[...soldBouquets]
+            .sort((a, b) => new Date(b.soldAt ?? b.createdAt).getTime() - new Date(a.soldAt ?? a.createdAt).getTime())
+            .map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between bg-white border border-emerald-100 rounded-lg px-3 py-2 text-sm"
+              >
+                <div>
+                  <span className="text-emerald-900 font-medium">{b.name}</span>{' '}
+                  <span className="text-xs text-emerald-700/50">
+                    via {CHANNEL_LABELS[b.soldChannel!] ?? b.soldChannel}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-emerald-700">Cost {(b.costCzk / 100).toFixed(2)} Kč</span>
+                  <span className="text-emerald-700 font-medium">
+                    Sold {b.salePriceCzk !== null ? (b.salePriceCzk / 100).toFixed(2) : '—'} Kč
+                  </span>
+                  <span className="text-xs text-emerald-700/50">
+                    {new Date(b.soldAt ?? b.createdAt).toLocaleDateString('cs-CZ', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+        </div>
       )}
     </div>
   );
