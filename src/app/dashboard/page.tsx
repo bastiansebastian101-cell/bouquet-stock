@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/apiFetch';
+import { SalesHistoryList, type SoldBouquet } from '@/components/SalesHistoryList';
 
 interface Stats {
   totalInventoryCzk: number;
@@ -24,6 +25,7 @@ const PERIODS: { value: string; label: string }[] = [
 export default function Dashboard() {
   const [period, setPeriod] = useState('today');
   const [stats, setStats] = useState<Stats | null>(null);
+  const [soldBouquets, setSoldBouquets] = useState<SoldBouquet[]>([]);
 
   useEffect(() => {
     apiFetch(`/api/stats?period=${period}`)
@@ -31,6 +33,13 @@ export default function Dashboard() {
       .then((data) => setStats(data))
       .catch(() => setStats(null));
   }, [period]);
+
+  useEffect(() => {
+    apiFetch('/api/bouquets')
+      .then((res) => res.json())
+      .then((data) => setSoldBouquets((data.bouquets ?? []).filter((b: SoldBouquet) => b.soldChannel)))
+      .catch(() => setSoldBouquets([]));
+  }, []);
 
   return (
     <div className="min-h-screen bg-emerald-50/40 px-4 py-10">
@@ -139,6 +148,14 @@ export default function Dashboard() {
           >
             💰 Add Sales Record
           </Link>
+        </div>
+
+        {/* Sales history */}
+        <div className="mt-10">
+          <h2 className="text-sm font-medium text-emerald-700/70 mb-3 uppercase tracking-wide">
+            Sales History
+          </h2>
+          <SalesHistoryList bouquets={soldBouquets} />
         </div>
       </div>
     </div>
